@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include<pthread.h>
 
+#define show_error('')
 
 
 
