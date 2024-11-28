@@ -10,11 +10,12 @@
 
 #define show_error(str) (fprintf(stderr, "%s: %s\n", str, strerror(errno)))
 
-void* recieve_data( void *socket_desc){
-    int sock =  *(int*)socket_desc;
+void* recieve_data(int *socket_desc){
+    int  sock =(int)* socket_desc;
     char* server_reply =  malloc(sizeof(char)*20000);
     int recv_size;
-    while ((recv_size=recv(sock,server_reply,sizeof(server_reply)-1,0) > 0)){
+    while ((recv_size=recv(sock,server_reply,sizeof(char)*20000,0)) > 0){
+        printf("RECIVEV SIZE : %d",recv_size);
         server_reply[recv_size] = '\0';
         printf("Server Reply:\n%s\n",server_reply);
     }
@@ -42,7 +43,7 @@ int main(int argc , char *argv[])
 		puts("Could not create socket");
 	}
 		
-	server.sin_addr.s_addr = inet_addr("127.0.0.1");
+	server.sin_addr.s_addr = inet_addr("0.0.0.0");
 	server.sin_family = AF_INET;
 	server.sin_port = htons( 8000);
     puts(strerror(errno));
@@ -55,7 +56,7 @@ int main(int argc , char *argv[])
 	}
 	
 	puts("Connected");
-    if (pthread_create(&recieve_thread,NULL,recieve_data,&socket_desc)!=0){
+    if (pthread_create(&recieve_thread,NULL,(void*)&recieve_data,&socket_desc)!=0){
         show_error("Thread connection failed");
     }
 	if( send(socket_desc , message , strlen(message) , 0) < 0)
@@ -70,5 +71,4 @@ int main(int argc , char *argv[])
 	puts(server_reply);
 	return 0;
 }
-
 
