@@ -5,10 +5,16 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <pthread.h>
 #include <unistd.h>
 
 #define PORT 4221
 #define BUFFER_SIZE 1024
+
+
+void* thread_request(int client_fd){
+
+}
 
 char *str_to_index(int from, int to, char *str) {
   while (from > 0) {
@@ -24,9 +30,11 @@ char *str_to_index(int from, int to, char *str) {
   return return_str;
 }
 
+
 int main() {
   setbuf(stdout, NULL);
   setbuf(stderr, NULL);
+  pthread_t *client_thread;
 
   printf("Logs from the program \n");
   int server_fd, client_fd;
@@ -63,6 +71,13 @@ int main() {
   }
   printf("Waiting for a client to connect...\n");
   while (1) {
+    printf("CLIENT...\n");
+    client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
+    if (client_fd < 0) {
+      printf("Accept Failed: %s\n", strerror(errno));
+      continue;
+    }
+    printf("accepting conn");
     client_fd =
         accept(server_fd, (struct sockaddr *)&client_addr, &client_addr_len);
     if (client_fd < 0) {
