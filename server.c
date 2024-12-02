@@ -7,9 +7,10 @@
 #include <unistd.h>
 
 #define BUFFER_SIZE 1024
+char directory[2048];
 
-void *handle_client(void *arg) {
-  int client_fd = *(int *)arg;
+void* handle_client(void* arg) {
+  int client_fd = *(int*)arg;
   char buffer[BUFFER_SIZE];
   char buffercpy[BUFFER_SIZE];
   if (client_fd < 0) {
@@ -21,8 +22,8 @@ void *handle_client(void *arg) {
   strcpy(buffercpy, buffer);
   printf("Message from client : %s \n", buffer);
   /* TOKENIZERS */
-  char *first_method = strtok(buffer, "/");
-  char *second_str = strtok(NULL, "/");
+  char* first_method = strtok(buffer, "/");
+  char* second_str = strtok(NULL, "/");
   /* RESPONSE TYPES */
   char normal_response[35] = "HTTP/1.1 200 OK\r\n\r\n ";
   char notfound[35] = "HTTP/1.1 404 Not Found\r\n\r\n ";
@@ -32,7 +33,7 @@ void *handle_client(void *arg) {
     if (strcmp(second_str, "/") == 0) {
       send(client_fd, normal_response, sizeof(normal_response), 0);
     } else if (strcmp(second_str, "echo") == 0) {
-      char *specific_str = strtok(NULL, "/ ");
+      char* specific_str = strtok(NULL, "/ ");
       sprintf(echo_string_type,
               "HTTP/1.1 200 OK\r\nContent-Type: "
               "text/plain\r\nContent-Length: %lu\r\n\r\n%s",
@@ -41,9 +42,9 @@ void *handle_client(void *arg) {
     } else if (strcmp(second_str, " HTTP") == 0) {
       send(client_fd, normal_response, 40, 0);
     } else if (strstr(buffercpy, "user-agent")) {
-      char *user_agent = strstr(buffercpy, "User-Agent: ");
+      char* user_agent = strstr(buffercpy, "User-Agent: ");
       user_agent += strlen("User-Agent: ");
-      char *eof = strstr(user_agent, "\r\n");
+      char* eof = strstr(user_agent, "\r\n");
       if (eof) {
         *eof = '\0';
       }
@@ -52,6 +53,36 @@ void *handle_client(void *arg) {
               "text/plain\r\nContent-Length: %lu\r\n\r\n%s",
               strlen(user_agent), user_agent);
       send(client_fd, echo_string_type, BUFFER_SIZE, 0);
+    } else if (strcmp(second_str, "files") == 0) {
+      char* specific_str = strtok(NULL, "/ ");
+      if (specific_str == NULL) {
+        send(client_fd, notfound, sizeof(notfound), 0);
+        return 0;
+      }
+      strcat(directory, specific_str);
+      FILE* fp = fopen(directory, "rb");
+      char content[BUFFER_SIZE];
+      if (!fp) {
+        send(client_fd, notfound, strlen(notfound), 0);
+        return 0;
+      }
+      int bytes_read = fread(content, 1, BUFFER_SIZE, fp);
+      char* format =
+          "HTTP/1.1 200 OK\r\n"
+          "Content-Type: application/octet-stream\r\n"
+          "Content-Length: %zu\r\n\r\n%s";
+      printf("THER DIRE IS %s \n", directory);
+      if (bytes_read > 0) {
+        char* response = malloc(BUFFER_SIZE);
+        sprintf(response, format, bytes_read, content);
+        printf("REPONSE WILL BE (%s)", response);
+        send(client_fd, response, strlen(response), 0);
+        free(response);
+      } else {
+        printf("File Dosen't exists or failed to open file");
+        send(client_fd, notfound, strlen(notfound), 0);
+        return 0;
+      }
     } else {
       send(client_fd, notfound, sizeof(notfound), 0);
     }
@@ -60,7 +91,11 @@ void *handle_client(void *arg) {
   }
   return NULL;
 }
-int main() {
+int main(int argc, char* argv[]) {
+  if (argc >= 2 && (strncmp(argv[1], "--directory", 11) == 0)) {
+    strcpy(directory, argv[2]);
+  }
+  printf("THe directory is : %s", directory);
   pthread_t thread_id;
   printf("Logs from the program \n");
   int server_fd, *client_fd;
@@ -81,7 +116,7 @@ int main() {
   serv_addr.sin_family = AF_INET;
   serv_addr.sin_port = htons(4221);
   serv_addr.sin_addr.s_addr = INADDR_ANY;
-  if (bind(server_fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) {
+  if (bind(server_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
     printf("Bind failed: %s\n", strerror(errno));
     return 1;
   }
@@ -93,7 +128,7 @@ int main() {
   printf("Server is listening on port 4221\n");
   while (1) {
     client_fd = malloc(sizeof(int));
-    if ((*client_fd = accept(server_fd, (struct sockaddr *)&client_addr,
+    if ((*client_fd = accept(server_fd, (struct sockaddr*)&client_addr,
                              &client_addr_len)) < 0) {
       printf("Accept failed: %s\n", strerror(errno));
       free(client_fd);
